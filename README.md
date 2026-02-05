@@ -1,0 +1,39 @@
+# Live Voice Chat AI
+
+A real-time voice chat web app with streaming audio, live transcription, and low-latency responses.
+
+## Highlights
+- Full-duplex audio streaming (talk and listen without turn-taking)
+- Live transcript feed
+- Modern single-page UI (no frontend build step)
+
+## Stack
+- Frontend: React (CDN), vanilla CSS, Opus recorder/decoder
+- Backend: FastAPI for static assets + websocket server for streaming
+- Model: Kyutai Labs Moshi (speech-to-speech)
+
+## Project Structure
+- `src/frontend/` UI (served as static files)
+- `src/app.py` FastAPI server for static assets
+- `src/moshi.py` websocket server for model streaming
+
+## Quick Start (Modal)
+1. Install Modal
+   ```shell
+   pip install modal
+   ```
+2. Authenticate
+   ```shell
+   modal setup
+   ```
+3. Run the app
+   ```shell
+   modal serve src.app
+   ```
+
+## Notes
+- Microphone access is required in the browser.
+- If you update frontend assets and don’t see changes, clear your browser cache.
+
+## Credits
+Developed by [Anurag Singh](https://github.com/anurag-m1)
