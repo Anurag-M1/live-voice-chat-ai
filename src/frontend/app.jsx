@@ -1,12 +1,42 @@
 const { useRef, useEffect, useState } = React;
 
-const getBaseURL = () => {
+const getModalDerivedEndpoint = () => {
   // use current web app server domain to construct the url for the moshi app
   const currentURL = new URL(window.location.href);
   let hostname = currentURL.hostname;
   hostname = hostname.replace("-web", "-moshi-web");
   const wsProtocol = currentURL.protocol === "https:" ? "wss:" : "ws:";
   return `${wsProtocol}//${hostname}/ws`;
+};
+
+const resolveWebSocketEndpoint = () => {
+  const params = new URLSearchParams(window.location.search);
+  const queryEndpoint = params.get("ws");
+  if (queryEndpoint) {
+    return queryEndpoint;
+  }
+  if (
+    window.LIVE_VOICE_WS_ENDPOINT &&
+    window.LIVE_VOICE_WS_ENDPOINT.trim().length > 0
+  ) {
+    return window.LIVE_VOICE_WS_ENDPOINT.trim();
+  }
+  if (window.location.hostname.includes("-web")) {
+    return getModalDerivedEndpoint();
+  }
+  return "";
+};
+
+const getEndpointLabel = (endpoint) => {
+  if (!endpoint) {
+    return "Not set";
+  }
+  try {
+    const url = new URL(endpoint);
+    return url.host;
+  } catch (error) {
+    return "Invalid";
+  }
 };
 
 const App = () => {
@@ -31,6 +61,8 @@ const App = () => {
   const [pendingSentence, setPendingSentence] = useState("");
   const [connectionStatus, setConnectionStatus] = useState("connecting");
   const [errorMessage, setErrorMessage] = useState("");
+  const [wsEndpoint] = useState(() => resolveWebSocketEndpoint());
+  const endpointLabel = getEndpointLabel(wsEndpoint);
 
   // Mic Input: start the Opus recorder
   const startRecording = async () => {
@@ -140,9 +172,23 @@ const App = () => {
 
   // WebSocket: open websocket connection and start recording
   useEffect(() => {
-    const endpoint = getBaseURL();
-    console.log("Connecting to", endpoint);
-    const socket = new WebSocket(endpoint);
+    if (!wsEndpoint) {
+      setConnectionStatus("error");
+      setErrorMessage(
+        "No websocket endpoint configured. Set window.LIVE_VOICE_WS_ENDPOINT in index.html or add ?ws=wss://YOUR-ENDPOINT/ws."
+      );
+      return;
+    }
+
+    let socket;
+    try {
+      console.log("Connecting to", wsEndpoint);
+      socket = new WebSocket(wsEndpoint);
+    } catch (error) {
+      setConnectionStatus("error");
+      setErrorMessage("Invalid websocket endpoint. Check the URL and try again.");
+      return;
+    }
     socketRef.current = socket;
 
     socket.onopen = () => {
@@ -203,7 +249,7 @@ const App = () => {
     return () => {
       socket.close();
     };
-  }, []);
+  }, [wsEndpoint]);
 
   return (
     <div className="app">
@@ -237,6 +283,10 @@ const App = () => {
           <div className="metric-card">
             <strong>Bidirectional</strong>
             Speak and listen without interruptions.
+          </div>
+          <div className="metric-card">
+            <strong>WebSocket</strong>
+            {endpointLabel}
           </div>
         </div>
       </header>
